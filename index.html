@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Kas Blockchain Himpunan</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; }
+        .card-custom { border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+
+    <div class="container my-5">
+        <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+            <div>
+                <h1 class="h2 text-primary" id="namaHimpunanLabel">Sistem Kas Blockchain</h1>
+                <p class="text-muted mb-0">Transparansi Keuangan Berbasis Smart Contract</p>
+            </div>
+            <button class="btn btn-warning fw-bold" id="btnConnect">Hubungkan Wallet (MetaMask)</button>
+        </div>
+
+        <div class="alert alert-info py-2 card-custom mb-4" id="walletStatus">
+            Wallet Belum Terhubung. Silakan klik tombol di atas menggunakan akun Bendahara yang sah.
+        </div>
+
+        <div class="row text-center mb-5">
+            <div class="col-md-6 mb-3">
+                <div class="card p-4 card-custom bg-white border-0">
+                    <h5 class="text-muted">Total Saldo Kas</h5>
+                    <h2 class="text-success fw-bold" id="txtTotalSaldo">Rp 0</h2>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="card p-4 card-custom bg-white border-0">
+                    <h5 class="text-muted">Total Transaksi</h5>
+                    <h2 class="text-dark fw-bold" id="txtTotalTransaksi">0</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card p-4 card-custom border-0 h-100">
+                    <h4 class="mb-3 text-secondary border-bottom pb-2">Panel Bendahara</h4>
+                    
+                    <h6 class="fw-bold text-success mt-2">1. Input Uang Masuk</h6>
+                    <div class="mb-3">
+                        <input type="number" class="form-control mb-2" id="inPemasukanJumlah" placeholder="Jumlah Angka Nominal (Contoh: 50000)">
+                        <input type="text" class="form-control mb-2" id="inPemasukanKet" placeholder="Keterangan (Contoh: Uang Kas Juni)">
+                        <input type="text" class="form-control mb-2" id="inPemasukanPJ" placeholder="Nama Pembayar / Sumber">
+                        <button class="btn btn-success w-100" id="btnPemasukan">Catat Pemasukan</button>
+                    </div>
+
+                    <h6 class="fw-bold text-danger mt-4">2. Catat Uang Keluar (Langsung Potong Saldo)</h6>
+                    <div class="mb-3">
+                        <input type="number" class="form-control mb-2" id="inPengeluaranJumlah" placeholder="Jumlah Angka Nominal (Contoh: 15000)">
+                        <input type="text" class="form-control mb-2" id="inPengeluaranKet" placeholder="Keterangan Proker">
+                        <input type="text" class="form-control mb-2" id="inPengeluaranPJ" placeholder="Penanggung Jawab Proker">
+                        <button class="btn btn-danger w-100" id="btnPengeluaran">Catat Pengeluaran</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 mb-4">
+                <div class="card p-4 card-custom border-0 h-100">
+                    <h4 class="mb-3 text-secondary border-bottom pb-2">Panel Ketua Himpunan</h4>
+                    <p class="text-muted small">Fitur verifikasi tanda tangan digital otomatis terintegrasi pada pembukuan langsung Bendahara.</p>
+                    <div class="mb-3">
+                        <label for="inAccId" class="form-label fw-bold">Masukkan ID Transaksi Verifikasi:</label>
+                        <input type="number" class="form-control mb-3" id="inAccId" placeholder="Contoh: 2">
+                        <button class="btn btn-primary w-100 fw-bold" id="btnAcc">Periksa Validasi Otoritas Dana</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card p-4 card-custom border-0 mt-4">
+            <h4 class="mb-3 text-secondary border-bottom pb-2">Log Riwayat Pembukuan Blockchain</h4>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>ID</th>
+                            <th>Tipe</th>
+                            <th>Nominal</th>
+                            <th>Keterangan</th>
+                            <th>Penanggung Jawab</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelRiwayat">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js" type="text/javascript"></script>
+    <script src="app.js"></script>
+</body>
+</html>
