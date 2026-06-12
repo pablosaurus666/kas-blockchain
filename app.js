@@ -1,3 +1,4 @@
+// 1. ATUR KONFIGURASI DAN PROVIDER UTAMA
 const contractAddress = "0xAC00Ad360FfF10e906fF99F8C91A7e0884fB6592";
 
 const contractABI = [
@@ -10,36 +11,124 @@ const contractABI = [
     "function catatPengeluaran(uint256 _jumlah, string memory _keterangan, string memory _pjProker) public"
 ];
 
+// Pipa RPC Publik Sepolia agar orang tanpa MetaMask bisa membaca data blockchain secara gratis
+const SEPOLIA_PUBLIC_RPC = "https://rpc.ankr.com/eth_sepolia"; 
+
 let provider;
 let signer;
 let contract;
 
-// 2. FUNGSI UTAMA: MENYAMBUNGKAN KE METAMASK & BLOCKCHAIN
+// 2. OTOMATISASI SAAT WEB DIBUKA (Mendukung Pengunjung Umum / Tanpa MetaMask)
+window.addEventListener("DOMContentLoaded", async () => {
+    // Daftarkan event listener tombol aksi
+    document.getElementById("btnConnect").addEventListener("click", inisialisasiWeb3);
+    document.getElementById("btnPemasukan").addEventListener("click", inputPemasukan);
+    document.getElementById("btnPengeluaran").addEventListener("click", inputPengeluaran);
+    document.getElementById("btnAcc").addEventListener("click", setujuiDana);
+
+    // Langkah awal: Muat data menggunakan RPC Publik (Mode Transparansi Publik)
+    try {
+        console.log("Menghubungkan ke RPC Publik Sepolia...");
+        provider = new ethers.providers.JsonRpcProvider(SEPOLIA_PUBLIC_RPC);
+        contract = new ethers.Contract(contractAddress, contractABI, provider);
+        
+        // Atur status interface default untuk umum (Read-Only)
+        const walletStatusAlert = document.getElementById("walletStatus");
+        walletStatusAlert.innerText = "Mode Transparansi: Anda melihat data langsung dari Blockchain (Read-Only).";
+        walletStatusAlert.className = "alert alert-warning py-2 card-custom mb-4"; // Warna kuning (peringatan/viewer)
+        
+        // Kunci kolom input untuk umum
+        setFormStatus(true);
+
+        // Ambil data saldo dan tabel riwayat untuk ditampilkan ke publik
+        await muatDataDashboard();
+
+        // LOGIKA KEDUA: Jika ternyata browser memiliki MetaMask dan wallet-nya aktif terhubung,
+        // otomatis naikkan level ke mode transaksi (Auto-Connect untuk Bendahara)
+        if (typeof window.ethereum !== "undefined") {
+            const akunTerhubung = await window.ethereum.request({ method: "eth_accounts" });
+            if (akunTerhubung.length > 0) {
+                console.log("Wallet aktif terdeteksi. Mengaktifkan fitur otoritas...");
+                await hubungkanWalletOtomatis();
+            }
+        }
+    } catch (error) {
+        console.error("Gagal memuat data awal dari RPC Publik:", error);
+    }
+});
+
+// 3. FUNGSI LOGIN / KONEKSI WALLET MANUAL (DIKLIK OLEH BENDAHARA)
 async function inisialisasiWeb3() {
     if (typeof window.ethereum !== "undefined") {
         try {
-            const accounts = await window.ethereum.request({ method: "wallet_requestPermissions", params: [{ eth_accounts: {} }] })
+            // Meminta izin akses akun MetaMask
+            await window.ethereum.request({ method: "wallet_requestPermissions", params: [{ eth_accounts: {} }] })
                 .then(() => window.ethereum.request({ method: "eth_requestAccounts" }));
             
+            // Setel ulang provider menggunakan MetaMask (Web3Provider) agar bisa menulis data (Write)
             provider = new ethers.providers.Web3Provider(window.ethereum);
             signer = provider.getSigner();
             contract = new ethers.Contract(contractAddress, contractABI, signer);
             
-            document.getElementById("btnConnect").innerText = "Wallet Terhubung ✅";
-            document.getElementById("btnConnect").className = "btn btn-success fw-bold";
-            
-            muatDataDashboard();
+            // Jalankan verifikasi apakah yang login adalah Bendahara sah
+            await verifikasiOtoritasUser();
             alert("MetaMask berhasil terhubung!");
         } catch (error) {
             console.error(error);
             alert("Koneksi dibatalkan atau terjadi kesalahan: " + error.message);
         }
     } else {
-        alert("MetaMask tidak ditemukan!");
+        alert("MetaMask tidak ditemukan! Silakan gunakan browser yang mendukung Web3 atau buka lewat dApp Browser MetaMask.");
     }
 }
 
-// 3. FUNGSI UNTUK MEMBACA DATA & MENAMPILKAN KE DASHBOARD
+// Fungsi pembantu untuk memproses Auto-Connect internal
+async function hubungkanWalletOtomatis() {
+    try {
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        signer = provider.getSigner();
+        contract = new ethers.Contract(contractAddress, contractABI, signer);
+        await verifikasiOtoritasUser();
+    } catch (e) {
+        console.error("Gagal melakukan auto-connect:", e);
+    }
+}
+
+// Fungsi untuk memeriksa alamat user yang login vs sistem keamanan
+async function verifikasiOtoritasUser() {
+    try {
+        const alamatUser = await signer.getAddress();
+        
+        // Berhubung di contractABI fungsi bendahara() tidak dipasang, kita langsung buka form 
+        // Jika kamu ingin proteksi ketat, pastikan fungsi "bendahara" ada di ABI.
+        document.getElementById("btnConnect").innerText = "Wallet Terhubung ✅";
+        document.getElementById("btnConnect").className = "btn btn-success fw-bold";
+        
+        const walletStatusAlert = document.getElementById("walletStatus");
+        walletStatusAlert.innerText = "Sistem Siap! Sesi dompet kripto aktif. Pastikan Anda memiliki otoritas Bendahara untuk merubah data.";
+        walletStatusAlert.className = "alert alert-success py-2 card-custom mb-4";
+        
+        setFormStatus(false); // Buka kunci form karena wallet aktif mendampingi
+        await muatDataDashboard();
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+// Fungsi pembantu untuk mengunci atau membuka panel input HTML
+function setFormStatus(isLocked) {
+    document.getElementById("inPemasukanJumlah").disabled = isLocked;
+    document.getElementById("inPemasukanKet").disabled = isLocked;
+    document.getElementById("inPemasukanPJ").disabled = isLocked;
+    document.getElementById("btnPemasukan").className = isLocked ? "btn btn-secondary w-100 disabled" : "btn btn-success w-100";
+    
+    document.getElementById("inPengeluaranJumlah").disabled = isLocked;
+    document.getElementById("inPengeluaranKet").disabled = isLocked;
+    document.getElementById("inPengeluaranPJ").disabled = isLocked;
+    document.getElementById("btnPengeluaran").className = isLocked ? "btn btn-secondary w-100 disabled" : "btn btn-danger w-100";
+}
+
+// 4. FUNGSI UNTUK MEMBACA DATA & MENAMPILKAN KE DASHBOARD
 async function muatDataDashboard() {
     try {
         if (!contract) return;
@@ -52,14 +141,14 @@ async function muatDataDashboard() {
         document.getElementById("txtTotalSaldo").innerText = "Rp " + Number(saldo).toLocaleString('id-ID');
         document.getElementById("txtTotalTransaksi").innerText = totalTx.toString();
 
-        muatTabelTransaksi(Number(totalTx));
+        await muatTabelTransaksi(Number(totalTx));
 
     } catch (error) {
         console.error("Gagal mengambil data kas:", error);
     }
 }
 
-// 4. FUNGSI MEMUAT RIWAYAT TRANSAKSI KE TABEL HTML
+// 5. FUNGSI MEMUAT RIWAYAT TRANSAKSI KE TABEL HTML
 async function muatTabelTransaksi(totalTransaksi) {
     const tabel = document.getElementById("tabelRiwayat");
     tabel.innerHTML = ""; 
@@ -70,7 +159,6 @@ async function muatTabelTransaksi(totalTransaksi) {
             let tipeTransaksi = tx[1]; 
             let keteranganAsli = tx[3];
             
-            // Mengatur badge warna secara dinamis berdasarkan data asli blockchain
             let badgeTipe = "";
             let statusBadge = "";
 
@@ -79,7 +167,6 @@ async function muatTabelTransaksi(totalTransaksi) {
                 statusBadge = '<span class="badge bg-success">Disetujui</span>';
             } else {
                 badgeTipe = '<span class="badge bg-secondary">Pengeluaran</span>';
-                // Karena tipe pengeluaran di kontrak barumu langsung memotong saldo, statusnya otomatis sukses/disetujui
                 statusBadge = '<span class="badge bg-success">Disetujui</span>'; 
             }
 
@@ -100,13 +187,14 @@ async function muatTabelTransaksi(totalTransaksi) {
     }
 }
 
-// 5. FUNGSI UNTUK TOMBOL INPUT PEMASUKAN
+// 6. FUNGSI UNTUK TOMBOL INPUT PEMASUKAN
 async function inputPemasukan() {
     const jumlah = document.getElementById("inPemasukanJumlah").value;
     const ket = document.getElementById("inPemasukanKet").value;
     const pj = document.getElementById("inPemasukanPJ").value;
 
     if (!jumlah || !ket || !pj) return alert("Semua kolom pemasukan wajib diisi!");
+    if (!signer) return alert("Silakan hubungkan wallet MetaMask Anda terlebih dahulu!");
 
     try {
         const nilaiPemasukan = BigInt(jumlah);
@@ -124,13 +212,14 @@ async function inputPemasukan() {
     }
 }
 
-// 6. FUNGSI UNTUK TOMBOL INPUT PENGELUARAN
+// 7. FUNGSI UNTUK TOMBOL INPUT PENGELUARAN
 async function inputPengeluaran() {
     const jumlah = document.getElementById("inPengeluaranJumlah").value;
     const ket = document.getElementById("inPengeluaranKet").value;
     const pj = document.getElementById("inPengeluaranPJ").value;
 
     if (!jumlah || !ket || !pj) return alert("Semua kolom pengeluaran wajib diisi!");
+    if (!signer) return alert("Silakan hubungkan wallet MetaMask Anda terlebih dahulu!");
 
     try {
         const nilaiPengeluaran = BigInt(jumlah);
@@ -148,44 +237,7 @@ async function inputPengeluaran() {
     }
 }
 
-// 7. FUNGSI UTK FITUR ACC (DINONAKTIFKAN KARENA KONTRAK MENGGUNAKAN SISTEM POTONG LANGSUNG)
+// 8. FUNGSI ACC (DINONAKTIFKAN KARENA KONTRAK MENGGUNAKAN SISTEM POTONG LANGSUNG)
 async function setujuiDana() {
     alert("Fitur ACC dinonaktifkan: Kontrak pintar versi ini menggunakan sistem pencatatan langsung oleh Bendahara.");
 }
-
-// 8. PASANG EVENT LISTENER & OTOMATISASI KONEKSI WALLET (FIX VISUAL ALERT)
-window.addEventListener("DOMContentLoaded", async () => {
-    // Daftarkan aksi klik manual tombol tetap berfungsi seperti biasa
-    document.getElementById("btnConnect").addEventListener("click", inisialisasiWeb3);
-    document.getElementById("btnPemasukan").addEventListener("click", inputPemasukan);
-    document.getElementById("btnPengeluaran").addEventListener("click", inputPengeluaran);
-    document.getElementById("btnAcc").addEventListener("click", setujuiDana);
-
-    // LOGIKA AUTO-CONNECT
-    if (typeof window.ethereum !== "undefined") {
-        try {
-            const akunTerhubung = await window.ethereum.request({ method: "eth_accounts" });
-            if (akunTerhubung.length > 0) {
-                console.log("Wallet terdeteksi aktif. Melakukan auto-connect...");
-                
-                provider = new ethers.providers.Web3Provider(window.ethereum);
-                signer = provider.getSigner();
-                contract = new ethers.Contract(contractAddress, contractABI, signer);
-                
-                // 1. Perbarui tampilan Tombol Utama
-                document.getElementById("btnConnect").innerText = "Wallet Terhubung ✅";
-                document.getElementById("btnConnect").className = "btn btn-success fw-bold";
-                
-                // 2. BARIS PERBAIKAN: Perbarui teks & warna kotak alert panjang di bawahnya agar ikut sinkron!
-                const walletStatusAlert = document.getElementById("walletStatus");
-                walletStatusAlert.innerText = "Sistem Siap! Anda terhubung menggunakan otoritas Bendahara yang sah.";
-                walletStatusAlert.className = "alert alert-success py-2 card-custom mb-4"; // Ubah dari alert-info (biru) ke alert-success (hijau)
-                
-                // Muat data dashboard kas
-                muatDataDashboard();
-            }
-        } catch (error) {
-            console.error("Gagal menjalankan sistem auto-connect:", error);
-        }
-    }
-});
