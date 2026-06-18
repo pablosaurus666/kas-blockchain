@@ -15,11 +15,24 @@ let provider, signer, contract;
 let votingChart;
 
 window.addEventListener("DOMContentLoaded", async () => {
-    document.getElementById("btnConnect").addEventListener("click", bukaBilikManual);
-    document.getElementById("btnCoblos1").addEventListener("click", () => eksekusiCoblos(1));
-    document.getElementById("btnCoblos2").addEventListener("click", () => eksekusiCoblos(2));
+    // Daftarkan event listener dasar untuk tombol jika elemennya ada di halaman
+    if (document.getElementById("btnConnect")) {
+        document.getElementById("btnConnect").addEventListener("click", bukaBilikManual);
+    }
+    if (document.getElementById("btnCoblos1")) {
+        document.getElementById("btnCoblos1").addEventListener("click", () => eksekusiCoblos(1));
+    }
+    if (document.getElementById("btnCoblos2")) {
+        document.getElementById("btnCoblos2").addEventListener("click", () => eksekusiCoblos(2));
+    }
 
-    initChart();
+    // Deteksi otomatis tipe halaman berdasarkan variabel penanda di HTML
+    const isBilikPage = window.isBilikPage === true;
+
+    // Hanya buat grafik Chart.js jika berada di halaman utama (bukan di bilik suara)
+    if (!isBilikPage && document.getElementById('chartHasilSuara')) {
+        initChart();
+    }
 
     try {
         // Mengamankan pembacaan data awal konstan dari RPC Publik
@@ -27,11 +40,19 @@ window.addEventListener("DOMContentLoaded", async () => {
         contract = new ethers.Contract(contractAddress, contractABI, provider);
         
         const votingStatus = document.getElementById("votingStatus");
-        votingStatus.innerText = "Mode Pemantau Umum: Menampilkan data real-time langsung dari Blockchain.";
-        votingStatus.className = "alert alert-warning py-2 card-custom mb-4 text-center fw-medium text-dark";
+        
+        if (isBilikPage) {
+            // Tampilan jika yang diakses adalah halaman bilik.html
+            votingStatus.innerText = "Bilik Siap. Menunggu otorisasi tanda tangan dompet panitia...";
+            votingStatus.className = "alert alert-warning py-2 mb-4 text-center fw-medium text-dark";
+        } else {
+            // Tampilan jika yang diakses adalah halaman index.html
+            votingStatus.innerText = "Mode Pemantau Umum: Menampilkan data real-time langsung dari Blockchain.";
+            votingStatus.className = "alert alert-warning py-2 card-custom mb-4 text-center fw-medium text-dark";
+            await muatDashboardVoting();
+        }
 
-        await muatDashboardVoting();
-
+        // Cek koneksi MetaMask otomatis yang sudah tersimpan sebelumnya
         if (typeof window.ethereum !== "undefined") {
             const accounts = await window.ethereum.request({ method: "eth_accounts" });
             if (accounts.length > 0) {
@@ -75,17 +96,30 @@ async function muatDashboardVoting() {
         const k1 = await contract.suaraKandidat1();
         const k2 = await contract.suaraKandidat2();
 
-        document.getElementById("namaHimpunanLabel").innerText = "Sistem E-Voting " + nama;
-        document.getElementById("txtTotalSuara").innerText = total.toString();
-        document.getElementById("txtSuaraKandidat1").innerText = k1.toString() + " Suara";
-        document.getElementById("txtSuaraKandidat2").innerText = k2.toString() + " Suara";
+        // Update teks-teks elemen dashboard jika ada di halaman
+        if (document.getElementById("namaHimpunanLabel")) {
+            document.getElementById("namaHimpunanLabel").innerText = "Sistem E-Voting " + nama;
+        }
+        if (document.getElementById("txtTotalSuara")) {
+            document.getElementById("txtTotalSuara").innerText = total.toString();
+        }
+        if (document.getElementById("txtSuaraKandidat1")) {
+            document.getElementById("txtSuaraKandidat1").innerText = k1.toString() + " Suara";
+        }
+        if (document.getElementById("txtSuaraKandidat2")) {
+            document.getElementById("txtSuaraKandidat2").innerText = k2.toString() + " Suara";
+        }
 
-        if(votingChart) {
+        // Jalankan update grafik batangnya
+        if (votingChart) {
             votingChart.data.datasets[0].data = [Number(k1), Number(k2)];
             votingChart.update();
         }
 
-        await muatTabelAudit(Number(total));
+        // Jalankan tabel enkripsi audit jika elemennya tersedia
+        if (document.getElementById("tabelSuara")) {
+            await muatTabelAudit(Number(total));
+        }
     } catch (e) {
         console.error(e);
     }
@@ -102,7 +136,11 @@ async function bukaBilikManual() {
             contract = new ethers.Contract(contractAddress, contractABI, signer);
             
             verifikasiDanBukaAksesBilik();
-            await muatDashboardVoting();
+            
+            // Hanya muat data dashboard jika tidak berada di halaman bilik rahasia
+            if (window.isBilikPage !== true) {
+                await muatDashboardVoting();
+            }
             alert("Bilik suara digital berhasil dibuka!");
         } catch (e) { alert("Dibatalkan."); }
     } else { alert("Pasang MetaMask!"); }
@@ -116,16 +154,35 @@ async function aktifkanBilikOtomatis() {
 }
 
 function verifikasiDanBukaAksesBilik() {
-    document.getElementById("panelBilikSuara").style.display = "block";
-    document.getElementById("btnConnect").innerText = "Bilik Terbuka ✅";
-    document.getElementById("btnConnect").className = "nav-link text-white bg-success mt-4 text-center border border-success";
+    const isBilikPage = window.isBilikPage === true;
+    
+    if (document.getElementById("panelBilikSuara")) {
+        document.getElementById("panelBilikSuara").style.display = "block";
+    }
+    
     const votingStatus = document.getElementById("votingStatus");
-    votingStatus.innerText = "Sesi Bilik Suara Aktif! Otoritas Dompet Panitia Tersemat.";
-    votingStatus.className = "alert alert-success py-2 card-custom mb-4 text-center fw-medium";
+
+    if (isBilikPage) {
+        // Logika tampilan antarmuka khusus bilik.html
+        if (document.getElementById("panelLoginPanitia")) {
+            document.getElementById("panelLoginPanitia").style.display = "none";
+        }
+        votingStatus.innerText = "Sesi Pencoblosan Aktif! Silakan berikan hak suara Anda secara rahasia.";
+        votingStatus.className = "alert alert-success py-2 mb-4 text-center fw-medium text-white bg-success";
+    } else {
+        // Logika tampilan antarmuka khusus index.html
+        if (document.getElementById("btnConnect")) {
+            document.getElementById("btnConnect").innerText = "Bilik Terbuka ✅";
+            document.getElementById("btnConnect").className = "nav-link text-white bg-success mt-4 text-center border border-success";
+        }
+        votingStatus.innerText = "Sesi Bilik Suara Aktif! Otoritas Dompet Panitia Tersemat.";
+        votingStatus.className = "alert alert-success py-2 card-custom mb-4 text-center fw-medium";
+    }
 }
 
 async function muatTabelAudit(totalSuara) {
     const tabel = document.getElementById("tabelSuara");
+    if (!tabel) return;
     tabel.innerHTML = "";
     for (let i = totalSuara - 1; i >= 0; i--) {
         try {
@@ -138,15 +195,18 @@ async function muatTabelAudit(totalSuara) {
 }
 
 async function eksekusiCoblos(nomorKandidat) {
-    if (!signer) return alert("Bilik belum sah!");
-    let konfirmasi = confirm(`Apakah Anda yakin memilih Kandidat 0${nomorKandidat}?`);
+    if (!signer) return alert("Bilik belum sah! Hubungkan dompet panitia terlebih dahulu.");
+    let konfirmasi = confirm(`Apakah Anda yakin memilih Kandidat 0${nomorKandidat}? Pilihan tidak bisa diubah.`);
     if (!konfirmasi) return;
     try {
-        alert("Mengunci pilihan... Konfirmasi di MetaMask Panitia.");
+        alert("Mengunci pilihan... Konfirmasi transaksi di MetaMask.");
         const tx = await contract.coblos(nomorKandidat);
-        alert("Menunggu konfirmasi blok validator...");
+        alert("Menunggu konfirmasi blok validator... Jangan tutup halaman.");
         await tx.wait();
-        alert("Suara Anda berhasil disimpan!");
+        alert("Suara Anda berhasil disimpan ke dalam Blockchain!");
         location.reload();
-    } catch (error) { console.error(error); alert("Gagal memproses suara."); }
+    } catch (error) { 
+        console.error(error); 
+        alert("Gagal memproses suara. Pastikan MetaMask menggunakan akun resmi panitia."); 
+    }
 }
