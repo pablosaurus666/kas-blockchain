@@ -1,189 +1,152 @@
-const contractAddress = "0xAC00Ad360FfF10e906fF99F8C91A7e0884fB6592";
+const contractAddress = "0xc48E48Da96E7DBa2eF7Ae5006fE0f111732b6D6e";
 
 const contractABI = [
     "function namaHimpunan() public view returns (string)",
-    "function totalSaldo() public view returns (uint256)",
-    "function counterTransaksi() public view returns (uint256)",
-    "function getDetailTransaksi(uint256 _id) public view returns (uint256, string, uint256, string, string, uint256)",
-    "function riwayatTransaksi(uint256) public view returns (uint256 id, uint8 tipe, uint256 jumlah, string keterangan, string penanggungJawab, uint256 tanggal)",
-    "function catatPemasukan(uint256 _jumlah, string memory _keterangan, string memory _pembayar) public",
-    "function catatPengeluaran(uint256 _jumlah, string memory _keterangan, string memory _pjProker) public"
+    "function totalSuaraMasuk() public view returns (uint256)",
+    "function suaraKandidat1() public view returns (uint256)",
+    "function suaraKandidat2() public view returns (uint256)",
+    "function getDetailSuara(uint256 _index) public view returns (uint256, uint8, uint256)",
+    "function coblos(uint8 _pilihan) public"
 ];
 
 const SEPOLIA_PUBLIC_RPC = "https://rpc.ankr.com/eth_sepolia"; 
 
-let provider;
-let signer;
-let contract;
+let provider, signer, contract;
+let votingChart;
 
 window.addEventListener("DOMContentLoaded", async () => {
-    document.getElementById("btnConnect").addEventListener("click", inisialisasiWeb3);
-    document.getElementById("btnPemasukan").addEventListener("click", inputPemasukan);
-    document.getElementById("btnPengeluaran").addEventListener("click", inputPengeluaran);
-    document.getElementById("btnAcc").addEventListener("click", setujuiDana);
+    document.getElementById("btnConnect").addEventListener("click", bukaBilikManual);
+    document.getElementById("btnCoblos1").addEventListener("click", () => eksekusiCoblos(1));
+    document.getElementById("btnCoblos2").addEventListener("click", () => eksekusiCoblos(2));
 
-    // Bawaan awal: Sembunyikan panel input total untuk siapapun
-    document.getElementById("panelAdmin").style.display = "none";
+    initChart();
 
     try {
-        console.log("Menghubungkan ke RPC Publik Sepolia...");
+        // Mengamankan pembacaan data awal konstan dari RPC Publik
         provider = new ethers.providers.JsonRpcProvider(SEPOLIA_PUBLIC_RPC);
         contract = new ethers.Contract(contractAddress, contractABI, provider);
         
-        const walletStatusAlert = document.getElementById("walletStatus");
-        walletStatusAlert.innerText = "Mode Transparansi Publik: Data dibaca langsung dari Blockchain (Read-Only Mode).";
-        walletStatusAlert.className = "alert alert-warning py-2 card-custom mb-4";
+        const votingStatus = document.getElementById("votingStatus");
+        votingStatus.innerText = "Mode Pemantau Umum: Menampilkan data real-time langsung dari Blockchain.";
+        votingStatus.className = "alert alert-warning py-2 card-custom mb-4 text-center fw-medium text-dark";
 
-        await muatDataDashboard();
+        await muatDashboardVoting();
 
-        // Auto-connect jika di browser laptop/HP terpasang MetaMask yang sudah login akun admin
         if (typeof window.ethereum !== "undefined") {
-            const akunTerhubung = await window.ethereum.request({ method: "eth_accounts" });
-            if (akunTerhubung.length > 0) {
-                await hubungkanWalletOtomatis();
+            const accounts = await window.ethereum.request({ method: "eth_accounts" });
+            if (accounts.length > 0) {
+                await aktifkanBilikOtomatis();
             }
         }
-    } catch (error) {
-        console.error("Gagal memuat data awal dari RPC Publik:", error);
+    } catch (err) {
+        console.error(err);
     }
 });
 
-async function inisialisasiWeb3() {
-    if (typeof window.ethereum !== "undefined") {
-        try {
-            await window.ethereum.request({ method: "wallet_requestPermissions", params: [{ eth_accounts: {} }] })
-                .then(() => window.ethereum.request({ method: "eth_requestAccounts" }));
-            
-            provider = new ethers.providers.Web3Provider(window.ethereum);
-            signer = provider.getSigner();
-            contract = new ethers.Contract(contractAddress, contractABI, signer);
-            
-            await verifikasiOtoritasUser();
-            alert("Dompet Admin Berhasil Diverifikasi!");
-        } catch (error) {
-            console.error(error);
-            alert("Koneksi dibatalkan: " + error.message);
+function initChart() {
+    const ctx = document.getElementById('chartHasilSuara').getContext('2d');
+    votingChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Kandidat 01', 'Kandidat 02'],
+            datasets: [{
+                label: 'Jumlah Perolehan Suara',
+                data: [0, 0],
+                backgroundColor: ['#198754', '#0d6efd'],
+                borderWidth: 1,
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
         }
-    } else {
-        alert("Peringatan: Panel Admin membutuhkan ekstensi MetaMask!");
-    }
+    });
 }
 
-async function hubungkanWalletOtomatis() {
+async function muatDashboardVoting() {
     try {
-        provider = new ethers.providers.Web3Provider(window.ethereum);
-        signer = provider.getSigner();
-        contract = new ethers.Contract(contractAddress, contractABI, signer);
-        await verifikasiOtoritasUser();
+        if (!contract) return;
+        const nama = await contract.namaHimpunan();
+        const total = await contract.totalSuaraMasuk();
+        const k1 = await contract.suaraKandidat1();
+        const k2 = await contract.suaraKandidat2();
+
+        document.getElementById("namaHimpunanLabel").innerText = "Sistem E-Voting " + nama;
+        document.getElementById("txtTotalSuara").innerText = total.toString();
+        document.getElementById("txtSuaraKandidat1").innerText = k1.toString() + " Suara";
+        document.getElementById("txtSuaraKandidat2").innerText = k2.toString() + " Suara";
+
+        if(votingChart) {
+            votingChart.data.datasets[0].data = [Number(k1), Number(k2)];
+            votingChart.update();
+        }
+
+        await muatTabelAudit(Number(total));
     } catch (e) {
         console.error(e);
     }
 }
 
-async function verifikasiOtoritasUser() {
-    try {
-        // Tampilkan panel input KAS hanya jika dompet aktif terhubung (Otoritas Bendahara)
-        document.getElementById("panelAdmin").style.display = "flex"; 
-        
-        document.getElementById("btnConnect").innerText = "Admin Terhubung ✅";
-        document.getElementById("btnConnect").className = "btn btn-success fw-bold";
-        
-        const walletStatusAlert = document.getElementById("walletStatus");
-        walletStatusAlert.innerText = "Sesi Otoritas Aktif! Panel input data kas siap digunakan.";
-        walletStatusAlert.className = "alert alert-success py-2 card-custom mb-4";
-        
-        await muatDataDashboard();
-    } catch (err) {
-        console.error(err);
-    }
-}
-
-async function muatDataDashboard() {
-    try {
-        if (!contract) return;
-        const nama = await contract.namaHimpunan();
-        const saldo = await contract.totalSaldo();
-        const totalTx = await contract.counterTransaksi();
-
-        document.getElementById("namaHimpunanLabel").innerText = "Sistem Kas " + nama;
-        document.getElementById("txtTotalSaldo").innerText = "Rp " + Number(saldo).toLocaleString('id-ID');
-        document.getElementById("txtTotalTransaksi").innerText = totalTx.toString();
-
-        await muatTabelTransaksi(Number(totalTx));
-    } catch (error) {
-        console.error("Gagal mengambil data kas:", error);
-    }
-}
-
-async function muatTabelTransaksi(totalTransaksi) {
-    const tabel = document.getElementById("tabelRiwayat");
-    tabel.innerHTML = ""; 
-
-    for (let i = 1; i <= totalTransaksi; i++) {
+async function bukaBilikManual() {
+    if (typeof window.ethereum !== "undefined") {
         try {
-            const tx = await contract.getDetailTransaksi(i);
-            let tipeTransaksi = tx[1]; 
-            let keteranganAsli = tx[3];
+            await window.ethereum.request({ method: "wallet_requestPermissions", params: [{ eth_accounts: {} }] })
+                .then(() => window.ethereum.request({ method: "eth_requestAccounts" }));
             
-            let badgeTipe = tipeTransaksi === "Pemasukan" ? 
-                '<span class="badge bg-info">Pemasukan</span>' : '<span class="badge bg-secondary">Pengeluaran</span>';
-            let statusBadge = '<span class="badge bg-success">Disetujui</span>';
+            const web3Provider = new ethers.providers.Web3Provider(window.ethereum);
+            signer = web3Provider.getSigner();
+            contract = new ethers.Contract(contractAddress, contractABI, signer);
+            
+            verifikasiDanBukaAksesBilik();
+            await muatDashboardVoting();
+            alert("Bilik suara digital berhasil dibuka!");
+        } catch (e) { alert("Dibatalkan."); }
+    } else { alert("Pasang MetaMask!"); }
+}
 
-            let baris = `
-                <tr>
-                    <td>${tx[0]}</td>
-                    <td>${badgeTipe}</td>
-                    <td>Rp ${Number(tx[2]).toLocaleString('id-ID')}</td>
-                    <td>${keteranganAsli}</td>
-                    <td>${tx[4]}</td>
-                    <td>${statusBadge}</td>
-                </tr>
-            `;
-            tabel.innerHTML += baris;
-        } catch (err) {
-            console.error(err);
-        }
+async function aktifkanBilikOtomatis() {
+    const web3Provider = new ethers.providers.Web3Provider(window.ethereum);
+    signer = web3Provider.getSigner();
+    contract = new ethers.Contract(contractAddress, contractABI, signer);
+    verifikasiDanBukaAksesBilik();
+}
+
+function verifikasiDanBukaAksesBilik() {
+    document.getElementById("panelBilikSuara").style.display = "block";
+    document.getElementById("btnConnect").innerText = "Bilik Terbuka ✅";
+    document.getElementById("btnConnect").className = "nav-link text-white bg-success mt-4 text-center border border-success";
+    const votingStatus = document.getElementById("votingStatus");
+    votingStatus.innerText = "Sesi Bilik Suara Aktif! Otoritas Dompet Panitia Tersemat.";
+    votingStatus.className = "alert alert-success py-2 card-custom mb-4 text-center fw-medium";
+}
+
+async function muatTabelAudit(totalSuara) {
+    const tabel = document.getElementById("tabelSuara");
+    tabel.innerHTML = "";
+    for (let i = totalSuara - 1; i >= 0; i--) {
+        try {
+            const dataSuara = await contract.getDetailSuara(i);
+            let badgePilihan = dataSuara[1] === 1 ? '<span class="badge bg-success">Kandidat 01</span>' : '<span class="badge bg-primary">Kandidat 02</span>';
+            let waktuLokal = new Date(Number(dataSuara[2]) * 1000).toLocaleString('id-ID');
+            tabel.innerHTML += `<tr><td class="fw-bold">#${dataSuara[0]}</td><td>${badgePilihan}</td><td>${waktuLokal}</td><td><span class="badge bg-secondary">Immutable Block Verified</span></td></tr>`;
+        } catch (err) { console.error(err); }
     }
 }
 
-async function inputPemasukan() {
-    const jumlah = document.getElementById("inPemasukanJumlah").value;
-    const ket = document.getElementById("inPemasukanKet").value;
-    const pj = document.getElementById("inPemasukanPJ").value;
-
-    if (!jumlah || !ket || !pj) return alert("Semua kolom wajib diisi!");
-    if (!signer) return alert("Hubungkan wallet terlebih dahulu!");
-
+async function eksekusiCoblos(nomorKandidat) {
+    if (!signer) return alert("Bilik belum sah!");
+    let konfirmasi = confirm(`Apakah Anda yakin memilih Kandidat 0${nomorKandidat}?`);
+    if (!konfirmasi) return;
     try {
-        const tx = await contract.catatPemasukan(BigInt(jumlah), ket, pj);
-        alert("Transaksi dikirim! Menunggu konfirmasi Blockchain...");
-        await tx.wait(); 
-        alert("Pemasukan sukses dicatat!");
-        location.reload();
-    } catch (error) {
-        alert("Gagal mencatat data. Pastikan Anda adalah Bendahara pemilik kontrak!");
-    }
-}
-
-async function inputPengeluaran() {
-    const jumlah = document.getElementById("inPengeluaranJumlah").value;
-    const ket = document.getElementById("inPengeluaranKet").value;
-    const pj = document.getElementById("inPengeluaranPJ").value;
-
-    if (!jumlah || !ket || !pj) return alert("Semua kolom wajib diisi!");
-    if (!signer) return alert("Hubungkan wallet terlebih dahulu!");
-
-    try {
-        const tx = await contract.catatPengeluaran(BigInt(jumlah), ket, pj);
-        alert("Transaksi dikirim! Menunggu konfirmasi Blockchain...");
+        alert("Mengunci pilihan... Konfirmasi di MetaMask Panitia.");
+        const tx = await contract.coblos(nomorKandidat);
+        alert("Menunggu konfirmasi blok validator...");
         await tx.wait();
-        alert("Pengeluaran sukses dicatat!");
-        location.reload(); 
-    } catch (error) {
-        alert("Gagal mencatat data. Saldo tidak cukup atau Anda bukan Bendahara!");
-    }
-}
-
-async function setujuiDana() {
-    alert("Fitur otomatis terintegrasi langsung.");
+        alert("Suara Anda berhasil disimpan!");
+        location.reload();
+    } catch (error) { console.error(error); alert("Gagal memproses suara."); }
 }

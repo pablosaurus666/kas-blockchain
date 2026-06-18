@@ -3,101 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Kas Blockchain Himpunan</title>
+    <title>Sistem E-Voting Kriptografi | HMTI FT UHO</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #f8f9fa; }
-        .card-custom { border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        body { background-color: #f4f7f5; font-family: 'Segoe UI', sans-serif; overflow-x: hidden; }
+        .sidebar { min-height: 100vh; background-color: #0c341e; color: #fff; position: fixed; width: 290px; z-index: 100; box-shadow: 4px 0 15px rgba(0,0,0,0.15); }
+        .main-content { margin-left: 290px; padding: 40px; min-height: 100vh; }
+        .card-custom { border-radius: 15px; box-shadow: 0 4px 15px rgba(12, 52, 30, 0.05); border: none; background: #ffffff !important; transition: all 0.3s ease; color: #333333 !important; }
+        .card-custom:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(12, 52, 30, 0.1); }
+        .text-uho-green { color: #0c341e !important; }
+        .bg-uho-green { background-color: #0c341e !important; }
+        .sidebar .nav-link { color: #a3c7b3; border-radius: 8px; margin-top: 15px; font-weight: 500; text-align: center; }
+        .sidebar .nav-link.active { background-color: #198754; color: white; }
+        .candidate-avatar { width: 80px; height: 80px; background-color: #f8f9fa; border: 3px solid #0c341e; font-size: 1.8rem; color: #0c341e; font-weight: bold; }
+        .btn-uho-gold { background-color: #ffc107; color: #0c341e; font-weight: bold; border: 2px solid #e0a800; }
+        .btn-uho-gold:hover { background-color: #e0a800; color: #fff; }
+        @media (max-width: 768px) {
+            .sidebar { width: 100%; min-height: auto; position: relative; }
+            .main-content { margin-left: 0; padding: 20px; }
+        }
     </style>
 </head>
 <body>
 
-    <div class="container my-5">
-        <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+    <div class="sidebar d-flex flex-column p-4">
+        <div class="text-center mb-3 border-bottom border-success border-opacity-50 pb-3">
+            <div class="d-flex justify-content-center align-items-center gap-2 mb-3">
+                <img src="Universitas-Halu-Oleo-Kendari.png" alt="Logo FT UHO" class="rounded-circle border border-white bg-white" style="width: 55px; height: 55px; object-fit: cover;">
+                <img src="HMTII.jpeg" alt="Logo HMTI" class="rounded-circle border border-white bg-white" style="width: 55px; height: 55px; object-fit: cover;">
+            </div>
+            <h5 class="fw-bold mb-0 text-white" style="font-size: 1.1rem; letter-spacing: 0.5px;">E-VOTING WEB3</h5>
+            <span class="badge bg-warning text-dark fw-bold px-2 py-1 mt-2" style="font-size: 0.75rem;">HMTI FT UHO</span>
+        </div>
+        <ul class="nav nav-pills flex-column mb-auto">
+            <li class="nav-item">
+                <a href="#" class="nav-link active">📊 Real-Count Dashboard</a>
+            </li>
+            <li class="nav-item">
+                <a href="#" class="nav-link btn-uho-gold shadow-sm mt-4 text-center" id="btnConnect">🔐 Buka Bilik Suara (Panitia)</a>
+            </li>
+        </ul>
+        <hr class="border-success opacity-50">
+        <div class="text-center small" style="color: #a3c7b3;">
+            Infrastruktur Keamanan: <br>
+            <span class="badge bg-light text-success fw-bold mt-1">Sepolia Network</span>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom border-2">
             <div>
-                <h1 class="h2 text-primary" id="namaHimpunanLabel">Sistem Kas Blockchain</h1>
-                <p class="text-muted mb-0">Transparansi Keuangan Berbasis Smart Contract</p>
+                <h1 class="h2 text-dark fw-bold mb-1 text-uho-green" id="namaHimpunanLabel">Sistem E-Voting Blockchain</h1>
+                <p class="text-muted mb-0">Jurusan Teknik Informatika Fakultas Teknik Universitas Halu Oleo</p>
             </div>
-            <button class="btn btn-warning fw-bold" id="btnConnect">Hubungkan Wallet (Admin)</button>
         </div>
 
-        <div class="alert alert-info py-2 card-custom mb-4" id="walletStatus">
-            Memuat data transparansi langsung dari Blockchain...
+        <div class="alert alert-info py-3 card-custom mb-4 text-center fw-medium border-start border-4 border-info" id="votingStatus">
+            Menghubungkan jalur pipa enkripsi langsung ke Blockchain...
         </div>
 
-        <div class="row text-center mb-5">
+        <div class="row mb-4">
+            <div class="col-md-4 mb-4">
+                <div class="card p-4 card-custom text-center h-100 d-flex flex-column justify-content-center">
+                    <h5 class="text-muted fw-bold mb-2" style="font-size: 0.9rem; letter-spacing: 0.5px;">TOTAL SUARA SAH</h5>
+                    <h1 class="text-uho-green fw-bold display-2 mb-0" id="txtTotalSuara">0</h1>
+                    <span class="text-muted small mt-2">Diverifikasi oleh Validator Node</span>
+                </div>
+            </div>
+            <div class="col-md-8 mb-4">
+                <div class="card p-4 card-custom h-100">
+                    <h5 class="fw-bold text-uho-green mb-3 border-bottom pb-2">📈 Grafik Perolehan Suara Sementara</h5>
+                    <div style="position: relative; height:210px; width:100%">
+                        <canvas id="chartHasilSuara"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
             <div class="col-md-6 mb-3">
-                <div class="card p-4 card-custom bg-white border-0">
-                    <h5 class="text-muted">Total Saldo Kas</h5>
-                    <h2 class="text-success fw-bold" id="txtTotalSaldo">Rp 0</h2>
+                <div class="card p-4 card-custom text-center border-top border-5 border-success">
+                    <div class="candidate-avatar rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3 shadow-sm">01</div>
+                    <h4 class="fw-bold text-uho-green">Kandidat 01</h4>
+                    <p class="text-muted small px-2">Visi: Mewujudkan HMTI FT UHO yang Bersinergi, Inovatif, dan Unggul Akademik.</p>
+                    <div class="bg-light py-2 px-4 rounded-3 d-inline-block mt-2">
+                        <span class="text-muted small d-block">Perolehan</span>
+                        <h3 class="fw-bold text-success mb-0" id="txtSuaraKandidat1">0 Suara</h3>
+                    </div>
                 </div>
             </div>
             <div class="col-md-6 mb-3">
-                <div class="card p-4 card-custom bg-white border-0">
-                    <h5 class="text-muted">Total Transaksi</h5>
-                    <h2 class="text-dark fw-bold" id="txtTotalTransaksi">0</h2>
-                </div>
-            </div>
-        </div>
-
-        <div class="row" id="panelAdmin" style="display: none;">
-            <div class="col-md-6 mb-4">
-                <div class="card p-4 card-custom border-0 h-100">
-                    <h4 class="mb-3 text-secondary border-bottom pb-2">Panel Bendahara</h4>
-                    
-                    <h6 class="fw-bold text-success mt-2">1. Input Uang Masuk</h6>
-                    <div class="mb-3">
-                        <input type="number" class="form-control mb-2" id="inPemasukanJumlah" placeholder="Jumlah Angka Nominal (Contoh: 50000)">
-                        <input type="text" class="form-control mb-2" id="inPemasukanKet" placeholder="Keterangan (Contoh: Uang Kas Juni)">
-                        <input type="text" class="form-control mb-2" id="inPemasukanPJ" placeholder="Nama Pembayar / Sumber">
-                        <button class="btn btn-success w-100" id="btnPemasukan">Catat Pemasukan</button>
-                    </div>
-
-                    <h6 class="fw-bold text-danger mt-4">2. Catat Uang Keluar (Langsung Potong Saldo)</h6>
-                    <div class="mb-3">
-                        <input type="number" class="form-control mb-2" id="inPengeluaranJumlah" placeholder="Jumlah Angka Nominal (Contoh: 15000)">
-                        <input type="text" class="form-control mb-2" id="inPengeluaranKet" placeholder="Keterangan Proker">
-                        <input type="text" class="form-control mb-2" id="inPengeluaranPJ" placeholder="Penanggung Jawab Proker">
-                        <button class="btn btn-danger w-100" id="btnPengeluaran">Catat Pengeluaran</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-6 mb-4">
-                <div class="card p-4 card-custom border-0 h-100">
-                    <h4 class="mb-3 text-secondary border-bottom pb-2">Panel Ketua Himpunan</h4>
-                    <p class="text-muted small">Fitur verifikasi tanda tangan digital otomatis terintegrasi pada pembukuan langsung Bendahara.</p>
-                    <div class="mb-3">
-                        <label   class="form-label fw-bold">Masukkan ID Transaksi Verifikasi:</label>
-                        <input type="number" class="form-control mb-3" id="inAccId" placeholder="Contoh: 2">
-                        <button class="btn btn-primary w-100 fw-bold" id="btnAcc">Periksa Validasi Otoritas Dana</button>
+                <div class="card p-4 card-custom text-center border-top border-5 border-primary">
+                    <div class="candidate-avatar rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3 shadow-sm" style="border-color:#0d6efd; color:#0d6efd;">02</div>
+                    <h4 class="fw-bold text-primary">Kandidat 02</h4>
+                    <p class="text-muted small px-2">Visi: Menciptakan HMTI FT UHO Kolaboratif Berbasis Riset & Pengembangan Teknologi.</p>
+                    <div class="bg-light py-2 px-4 rounded-3 d-inline-block mt-2">
+                        <span class="text-muted small d-block">Perolehan</span>
+                        <h3 class="fw-bold text-primary mb-0" id="txtSuaraKandidat2">0 Suara</h3>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="card p-4 card-custom border-0 mt-4">
-            <h4 class="mb-3 text-secondary border-bottom pb-2">Log Riwayat Pembukuan Blockchain</h4>
+        <div class="card p-4 card-custom mb-5 text-center border border-danger bg-danger bg-opacity-10" id="panelBilikSuara" style="display: none;">
+            <h3 class="fw-bold text-danger border-bottom pb-3 mb-4">🛑 BILIK SUARA DIGITAL ELEKTRONIK AKTIF</h3>
+            <p class="text-dark fs-5 fw-medium">Hak Akses Valid. Silakan Pemilih Menekan Tombol Di Bawah Ini Sekali Saja:</p>
+            <div class="row mt-4 px-3">
+                <div class="col-6">
+                    <button class="btn btn-success btn-lg w-100 fw-bold py-3 shadow" id="btnCoblos1" style="font-size: 1.25rem;">COBLOS KANDIDAT 01</button>
+                </div>
+                <div class="col-6">
+                    <button class="btn btn-primary btn-lg w-100 fw-bold py-3 shadow" id="btnCoblos2" style="font-size: 1.25rem;">COBLOS KANDIDAT 02</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card p-4 card-custom mb-4">
+            <h4 class="mb-3 text-uho-green border-bottom pb-2 fw-bold">🧾 Log Enkripsi Kriptografi Audit Jalur Blockchain</h4>
             <div class="table-responsive">
-                <table class="table table-hover align-middle">
+                <table class="table table-hover align-middle text-center border mb-0">
                     <thead class="table-dark">
                         <tr>
-                            <th>ID</th>
-                            <th>Tipe</th>
-                            <th>Nominal</th>
-                            <th>Keterangan</th>
-                            <th>Penanggung Jawab</th>
-                            <th>Status</th>
+                            <th>ID Transaksi</th>
+                            <th>Pilihan Terkunci</th>
+                            <th>Timestamp Blok Masuk</th>
+                            <th>Status Integritas Data</th>
                         </tr>
                     </thead>
-                    <tbody id="tabelRiwayat">
-                        </tbody>
+                    <tbody id="tabelSuara"></tbody>
                 </table>
             </div>
         </div>
-
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js" type="text/javascript"></script>
     <script src="app.js"></script>
 </body>
