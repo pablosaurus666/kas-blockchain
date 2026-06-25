@@ -9,7 +9,7 @@ const contractABI = [
     "function coblos(uint8 _pilihan) public"
 ];
 
-const SEPOLIA_PUBLIC_RPC = "https://rpc.ankr.com/eth_sepolia"; 
+const SEPOLIA_PUBLIC_RPC = "https://ethereum-sepolia-rpc.publicnode.com";
 
 let provider, signer, contract;
 let votingChart;
